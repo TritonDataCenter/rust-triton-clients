@@ -1,3 +1,4 @@
+use serde_json::Value;
 use slog::Logger;
 use std::time::Duration;
 
@@ -5,15 +6,19 @@ use reqwest::{Client, IntoUrl, Response};
 // Use old-style Hyper headers until they put them back in.
 use reqwest::hyper_011::header::{Accept, ContentType, Headers};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Services {
-     metadata: Vec<ServiceData>,
+    metadata: Vec<ServiceData>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct ServiceData {
    name: String,
+//   service_name: String,
+//   napi_log_level: String,
+//   service_domain: String,
 }
 
 #[derive(Debug)]
@@ -65,6 +70,39 @@ impl SAPI {
         Ok(sdata)
     }
 
+    pub fn create_service(
+        &self,
+        name: &str,
+        application_uuid: &str
+    ) -> Result<Response, Box<dyn std::error::Error>> {
+        let body = json!({
+            "name": name,
+            "application_uuid": application_uuid
+        });
+        let url = format!("{}", self.sapi_base_url.clone() + "/services");
+        self.post(&url, &body)
+    }
+
+    pub fn update_service(
+        &self,
+        service_uuid: &str,
+        body: Value
+    ) -> Result<Response, Box<dyn std::error::Error>> {
+        let url = format!("{}", self.sapi_base_url.clone()
+                          + "/services/{}" + service_uuid);
+        self.post(&url, &body)
+    }
+
+    pub fn delete_service(
+        &self,
+        service_uuid: &str
+    ) -> Result<Response, Box<dyn std::error::Error>> {
+        let url = format!("{}", self.sapi_base_url.clone()
+                          + "/services/{}" + service_uuid);
+        self.delete(&url)
+    }
+
+
     fn default_headers(&self) -> Headers {
         let mut headers = Headers::new();
 
@@ -74,7 +112,7 @@ impl SAPI {
     }
 
     /// Generic get -- results deserialized by caller
-    fn get<S>(
+    pub fn get<S>(
         &self,
         url: S
     ) -> Result<Response, Box<dyn std::error::Error>>
@@ -87,8 +125,40 @@ impl SAPI {
         }
     }
 
-}
+    /// Generic post
+    fn post<S>(
+        &self,
+        url: S,
+        body: &Value
+    ) -> Result<Response, Box<dyn std::error::Error>>
+    where
+        S: IntoUrl,
+    {
 
+        let resp = self.client
+            .post(url)
+            .headers_011(self.default_headers())
+            .json(&body)
+            .send()?;
+        Ok(resp)
+    }
+
+    /// Generic delete
+    fn delete<S>(
+        &self,
+        url: S,
+    ) -> Result<Response, Box<dyn std::error::Error>>
+    where
+        S: IntoUrl,
+    {
+
+        let resp = self.client
+            .delete(url)
+            .headers_011(self.default_headers())
+            .send()?;
+        Ok(resp)
+    }
+}
 
 #[test]
 fn test_services() {
@@ -103,6 +173,18 @@ fn test_services() {
 
     let client = SAPI::new("http://10.77.77.136", 60, log.clone());
 
+    //let s_uuid = Uuid::new_v4();
+    let s_uuid = String::from("e68592d3-5677-44ec-a5e8-cfd3652dd5be");
+    let name = String::from("cheddar");
+    match client.create_service(&name, &s_uuid.to_string()) {
+        Ok(resp) => {
+            assert_eq!(resp.status().is_success(), true);
+        },
+        Err(_e) => {
+            assert!(false)
+        }
+    }
+
     match client.list_services() {
         Ok(list) => {
             assert_ne!(list.len(), 0);
@@ -113,3 +195,4 @@ fn test_services() {
         }
     }
 }
+
