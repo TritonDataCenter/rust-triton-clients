@@ -1,5 +1,4 @@
 // Copyright 2019 Joyent, Inc.
-use serde_json::Value;
 use slog::Logger;
 use std::time::Duration;
 
@@ -7,7 +6,7 @@ use reqwest::{Client, IntoUrl, Response};
 // Use old-style Hyper headers until they put them back in.
 use reqwest::hyper_011::header::{Accept, ContentType, Headers};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Services {
@@ -48,6 +47,20 @@ impl SAPI {
                 log: log.clone(),
         };
         sapi
+    }
+
+    pub fn get_zone_config(
+        &self,
+        uuid: &str
+    ) -> Result<Value, Box<dyn std::error::Error>> {
+        let url = format!("{}/configs/{}", self.sapi_base_url.clone(), uuid);
+        match self.get(&url)?.error_for_status() {
+            Ok(mut resp) => {
+                let v: Value = serde_json::from_str(&resp.text().unwrap())?;
+                Ok(v)
+            },
+            Err(e) => Err(Box::new(e))
+        }
     }
 
     /// List all services
@@ -163,7 +176,7 @@ impl SAPI {
 
 #[test]
 fn test_services() {
-    use slog::{info, o, Drain, Logger};
+    use slog::{error, info, o, Drain, Logger};
     use std::sync::Mutex;
 
     let plain = slog_term::PlainSyncDecorator::new(std::io::stdout());
@@ -174,7 +187,6 @@ fn test_services() {
 
     let client = SAPI::new("http://10.77.77.136", 60, log.clone());
 
-    //let s_uuid = Uuid::new_v4();
     let s_uuid = String::from("e68592d3-5677-44ec-a5e8-cfd3652dd5be");
     let name = String::from("cheddar");
     match client.create_service(&name, &s_uuid.to_string()) {
@@ -194,6 +206,15 @@ fn test_services() {
             info!(log, "Error: {:?}", e);
             assert!(false)
         }
+    }
+
+    let zone_uuid = String::from("f8bf03e3-5636-4cc4-a939-bbca6b4547f0");
+    match client.get_zone_config(&zone_uuid) {
+        Ok(resp) => {
+            info!(log, "config: {:?}", resp["manifests"]["BORAY_SERVER_PORT"]);
+            assert_eq!(resp["manifests"].as_null(), None);
+        },
+        Err(e) => error!(log, "error: {:?}",  e)
     }
 }
 
