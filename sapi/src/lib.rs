@@ -56,8 +56,7 @@ impl SAPI {
         let url = format!("{}/configs/{}", self.sapi_base_url.clone(), uuid);
         match self.get(&url)?.error_for_status() {
             Ok(mut resp) => {
-                let v: Value = serde_json::from_str(&resp.text().unwrap())?;
-                Ok(v)
+                Ok(serde_json::from_str(&resp.text().unwrap())?)
             },
             Err(e) => Err(Box::new(e))
         }
