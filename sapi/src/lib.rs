@@ -8,12 +8,15 @@ use reqwest::hyper_011::header::{Accept, ContentType, Headers};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+// The following structs' shapes are based on the SAPI JSON schemas
 
+/// Container for the zone metadata
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct ZoneConfig {
     metadata: ZoneMetadata,
 }
 
+/// Zone metadata, note the JSON returns is in screaming snake case.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct ZoneMetadata {
@@ -32,11 +35,12 @@ pub struct ServiceData {
    name: String,
 }
 
+/// The SAPI client
 #[derive(Debug)]
 pub struct SAPI {
     sapi_base_url: String,
     request_timeout: u64,
-    client: Client,
+    client: Client, // reqwest client
     log: Logger,
 }
 
@@ -60,6 +64,7 @@ impl SAPI {
         sapi
     }
 
+    /// Retrieve the "zone" configuration by zone UUID.
     pub fn get_zone_config(
         &self,
         uuid: &str
@@ -79,7 +84,7 @@ impl SAPI {
         Ok(sdata)
     }
 
-    /// get service by uuid
+    /// get service by UUID
     pub fn get_service(
         &self,
         uuid: &str
@@ -90,6 +95,7 @@ impl SAPI {
         Ok(sdata)
     }
 
+    /// create the named service under the application with the passed UUID
     pub fn create_service(
         &self,
         name: &str,
@@ -103,6 +109,7 @@ impl SAPI {
         self.post(&url, &body)
     }
 
+    /// modify the named service with the contents of 'body'
     pub fn update_service(
         &self,
         service_uuid: &str,
@@ -113,6 +120,7 @@ impl SAPI {
         self.post(&url, &body)
     }
 
+    ///
     pub fn delete_service(
         &self,
         service_uuid: &str
@@ -122,7 +130,9 @@ impl SAPI {
         self.delete(&url)
     }
 
-
+    //
+    // private functions
+    //
     fn default_headers(&self) -> Headers {
         let mut headers = Headers::new();
 
@@ -215,9 +225,9 @@ fn test_services() {
     }
 
     let zone_uuid = String::from("f8bf03e3-5636-4cc4-a939-bbca6b4547f0");
+
     match client.get_zone_config(&zone_uuid) {
         Ok(resp) => {
-            info!(log, "config: {:?}", resp);
             assert_eq!(resp.metadata.service_name, "2.moray.orbit.example.com");
         },
         Err(e) => error!(log, "error: {:?}",  e)
