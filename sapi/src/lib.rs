@@ -8,6 +8,20 @@ use reqwest::hyper_011::header::{Accept, ContentType, Headers};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct ZoneConfig {
+    metadata: ZoneMetadata,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub struct ZoneMetadata {
+    region: String,
+    service_name: String,
+    shard: String,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct Services {
     metadata: Vec<ServiceData>,
@@ -16,9 +30,6 @@ struct Services {
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct ServiceData {
    name: String,
-//   service_name: String,
-//   napi_log_level: String,
-//   service_domain: String,
 }
 
 #[derive(Debug)]
@@ -52,14 +63,10 @@ impl SAPI {
     pub fn get_zone_config(
         &self,
         uuid: &str
-    ) -> Result<Value, Box<dyn std::error::Error>> {
+    ) -> Result<ZoneConfig, Box<dyn std::error::Error>> {
         let url = format!("{}/configs/{}", self.sapi_base_url.clone(), uuid);
-        match self.get(&url)?.error_for_status() {
-            Ok(mut resp) => {
-                Ok(serde_json::from_str(&resp.text().unwrap())?)
-            },
-            Err(e) => Err(Box::new(e))
-        }
+        let zconfig: ZoneConfig = self.get(&url)?.json()?;
+        Ok(zconfig)
     }
 
     /// List all services
@@ -210,8 +217,8 @@ fn test_services() {
     let zone_uuid = String::from("f8bf03e3-5636-4cc4-a939-bbca6b4547f0");
     match client.get_zone_config(&zone_uuid) {
         Ok(resp) => {
-            info!(log, "config: {:?}", resp["manifests"]["BORAY_SERVER_PORT"]);
-            assert_eq!(resp["manifests"].as_null(), None);
+            info!(log, "config: {:?}", resp);
+            assert_eq!(resp.metadata.service_name, "2.moray.orbit.example.com");
         },
         Err(e) => error!(log, "error: {:?}",  e)
     }
