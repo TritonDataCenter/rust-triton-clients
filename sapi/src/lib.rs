@@ -8,8 +8,6 @@ use reqwest::hyper_011::header::{Accept, ContentType, Headers};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-// The following structs' shapes are based on the SAPI JSON schemas
-
 /// Container for the zone metadata
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct ZoneConfig {
@@ -142,7 +140,7 @@ impl SAPI {
     }
 
     /// Generic get -- results deserialized by caller
-    pub fn get<S>(
+    fn get<S>(
         &self,
         url: S
     ) -> Result<Response, Box<dyn std::error::Error>>
