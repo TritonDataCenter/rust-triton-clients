@@ -11,16 +11,17 @@ use serde_json::{json, Value};
 /// Container for the zone metadata
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct ZoneConfig {
-    metadata: ZoneMetadata,
+    pub metadata: ZoneMetadata,
 }
 
 /// Zone metadata, note the JSON returns is in screaming snake case.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct ZoneMetadata {
-    region: String,
-    service_name: String,
-    shard: String,
+    pub region: String,
+    pub service_name: String,
+    pub shard: String,
+    pub electric_boray: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
