@@ -42,9 +42,8 @@ pub struct ServiceData {
     uuid: String,
     application_uuid: String,
     params: Value,
+    #[serde(default)]
     metadata: Value,
-    #[serde(rename = "type")]
-    svc_type: ServiceType,
     #[serde(default)]
     master: bool,
 }
@@ -92,7 +91,6 @@ impl SAPI {
     pub fn list_services(
         &self
     ) -> Result<Vec<ServiceData>, Box<dyn std::error::Error>> {
-
         let url = format!("{}", self.sapi_base_url.clone() + "/services");
         let sdata: Vec<ServiceData> = self.get(&url)?.json()?;
         Ok(sdata)
