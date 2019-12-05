@@ -29,9 +29,24 @@ struct Services {
     metadata: Vec<ServiceData>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum ServiceType {
+    Vm,
+    Agent,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ServiceData {
-   name: String,
+    name: String,
+    uuid: String,
+    application_uuid: String,
+    params: Value,
+    metadata: Value,
+    #[serde(rename = "type")]
+    svc_type: ServiceType,
+    #[serde(default)]
+    master: bool,
 }
 
 /// The SAPI client
