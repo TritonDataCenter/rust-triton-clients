@@ -11,6 +11,7 @@ features = ["hyper-011"]
 miniz_oxide = "= 0.2.3"
 miniz_oxide_c_api = "= 0.2.2"
 flate2 = "= 1.0.9"
+joyent-rust-utils = { git = "https://github.com/joyent/rust-utils" }
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
