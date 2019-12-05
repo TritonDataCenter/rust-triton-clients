@@ -25,11 +25,6 @@ pub struct ZoneMetadata {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Services {
-    metadata: Vec<ServiceData>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum ServiceType {
     Vm,
@@ -42,11 +37,12 @@ pub struct ServiceData {
     uuid: String,
     application_uuid: String,
     params: Value,
-    #[serde(default)]
-    metadata: Value,
+    metadata: Option<Value>,
     #[serde(default)]
     master: bool,
 }
+
+type Services = Vec<ServiceData>;
 
 /// The SAPI client
 #[derive(Debug)]
@@ -90,9 +86,9 @@ impl SAPI {
     /// List all services
     pub fn list_services(
         &self
-    ) -> Result<Vec<ServiceData>, Box<dyn std::error::Error>> {
+    ) -> Result<Services, Box<dyn std::error::Error>> {
         let url = format!("{}", self.sapi_base_url.clone() + "/services");
-        let sdata: Vec<ServiceData> = self.get(&url)?.json()?;
+        let sdata: Services = self.get(&url)?.json()?;
         Ok(sdata)
     }
 
