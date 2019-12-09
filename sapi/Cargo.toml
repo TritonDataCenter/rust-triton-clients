@@ -19,6 +19,7 @@ serde_urlencoded = "0.5"
 slog = { version = "2.4.1", features = [ "max_level_trace" ] }
 slog-stdlog = "3"
 uuid = "0.7"
+unicode-normalization = "=0.1.5"
 
 [dev-dependencies]
 slog-term = "2.4.0"
