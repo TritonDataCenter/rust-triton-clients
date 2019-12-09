@@ -8,8 +8,6 @@ use reqwest::hyper_011::header::{Accept, ContentType, Headers};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-
-
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct SapiManifests {
     pub uuid: String,
@@ -33,13 +31,6 @@ pub struct ZoneConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "lowercase")]
-pub enum ServiceType {
-    Vm,
-    Agent,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ServiceData {
     pub name: String,
     pub uuid: String,
@@ -48,6 +39,9 @@ pub struct ServiceData {
     pub metadata: Option<Value>,
     #[serde(default)]
     pub master: bool,
+    // TODO: add the type field, which comes with sapi v2.0.
+    // In order to receive that field from sapi the "accept-version: 2" header
+    // field must be specified.
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -72,29 +66,21 @@ pub struct SAPI {
 
 impl SAPI {
     /// initialize SAPI client API
-    pub fn new(
-        sapi_base_url: &str,
-        request_timeout: u64,
-        log: Logger,
-    ) -> Self {
+    pub fn new(sapi_base_url: &str, request_timeout: u64, log: Logger) -> Self {
         let client = Client::builder()
             .timeout(Duration::from_secs(request_timeout))
             .build()
             .unwrap();
-        let sapi = SAPI {
-                sapi_base_url: sapi_base_url.into(),
-                request_timeout: request_timeout.into(),
-                client,
-                log: log.clone(),
-        };
-        sapi
+        SAPI {
+            sapi_base_url: sapi_base_url.into(),
+            request_timeout,
+            client,
+            log: log.clone(),
+        }
     }
 
     /// Retrieve the "zone" configuration by zone UUID.
-    pub fn get_zone_config(
-        &self,
-        uuid: &str
-    ) -> Result<ZoneConfig, Box<dyn std::error::Error>> {
+    pub fn get_zone_config(&self, uuid: &str) -> Result<ZoneConfig, Box<dyn std::error::Error>> {
         let url = format!("{}/configs/{}", self.sapi_base_url.clone(), uuid);
         let zconfig: ZoneConfig = self.get(&url)?.json()?;
         Ok(zconfig)
@@ -105,16 +91,13 @@ impl SAPI {
         &self,
         inst_uuid: &str,
     ) -> Result<InstanceData, Box<dyn std::error::Error>> {
-        let url = format!("{}/instances/{}", self.sapi_base_url.clone(),
-                          inst_uuid);
+        let url = format!("{}/instances/{}", self.sapi_base_url.clone(), inst_uuid);
         let instance: InstanceData = self.get(&url)?.json()?;
         Ok(instance)
     }
 
     /// List all instances
-    pub fn list_instances(
-        &self,
-    ) -> Result<Instances, Box<dyn std::error::Error>> {
+    pub fn list_instances(&self) -> Result<Instances, Box<dyn std::error::Error>> {
         let url = format!("{}/instances", self.sapi_base_url.clone());
         let instances: Instances = self.get(&url)?.json()?;
         Ok(instances)
@@ -124,28 +107,25 @@ impl SAPI {
         &self,
         svc_uuid: &str,
     ) -> Result<Instances, Box<dyn std::error::Error>> {
-        let url = format!("{}/instances?service_uuid={}", self.sapi_base_url
-            .clone(), svc_uuid);
+        let url = format!(
+            "{}/instances?service_uuid={}",
+            self.sapi_base_url.clone(),
+            svc_uuid
+        );
         let instances: Instances = self.get(&url)?.json()?;
         Ok(instances)
     }
 
     /// List all services
-    pub fn list_services(
-        &self
-    ) -> Result<Services, Box<dyn std::error::Error>> {
-        let url = format!("{}", self.sapi_base_url.clone() + "/services");
+    pub fn list_services(&self) -> Result<Services, Box<dyn std::error::Error>> {
+        let url = format!("{}/services", self.sapi_base_url.clone());
         let sdata: Services = self.get(&url)?.json()?;
         Ok(sdata)
     }
 
     /// get service by UUID
-    pub fn get_service(
-        &self,
-        uuid: &str
-    ) -> Result<ServiceData, Box<dyn std::error::Error>> {
-        let url = format!("{}", self.sapi_base_url.clone()
-                            + "/service/{}" + uuid);
+    pub fn get_service(&self, uuid: &str) -> Result<ServiceData, Box<dyn std::error::Error>> {
+        let url = format!("{}/services/{}", self.sapi_base_url.clone(), uuid);
         let sdata: ServiceData = self.get(&url)?.json()?;
         Ok(sdata)
     }
@@ -154,13 +134,13 @@ impl SAPI {
     pub fn create_service(
         &self,
         name: &str,
-        application_uuid: &str
+        application_uuid: &str,
     ) -> Result<Response, Box<dyn std::error::Error>> {
         let body = json!({
             "name": name,
             "application_uuid": application_uuid
         });
-        let url = format!("{}", self.sapi_base_url.clone() + "/services");
+        let url = format!("{}/services", self.sapi_base_url.clone());
         self.post(&url, &body)
     }
 
@@ -168,20 +148,18 @@ impl SAPI {
     pub fn update_service(
         &self,
         service_uuid: &str,
-        body: Value
+        body: Value,
     ) -> Result<Response, Box<dyn std::error::Error>> {
-        let url = format!("{}", self.sapi_base_url.clone()
-                          + "/services/{}" + service_uuid);
+        let url = format!("{}/services/{}", self.sapi_base_url.clone(), service_uuid);
         self.post(&url, &body)
     }
 
     ///
     pub fn delete_service(
         &self,
-        service_uuid: &str
+        service_uuid: &str,
     ) -> Result<Response, Box<dyn std::error::Error>> {
-        let url = format!("{}", self.sapi_base_url.clone()
-                          + "/services/{}" + service_uuid);
+        let url = format!("{}/services/{}", self.sapi_base_url.clone(), service_uuid);
         self.delete(&url)
     }
 
@@ -197,30 +175,28 @@ impl SAPI {
     }
 
     /// Generic get -- results deserialized by caller
-    fn get<S>(
-        &self,
-        url: S
-    ) -> Result<Response, Box<dyn std::error::Error>>
+    fn get<S>(&self, url: S) -> Result<Response, Box<dyn std::error::Error>>
     where
-        S: IntoUrl
+        S: IntoUrl,
     {
-        match self.client.get(url).headers_011(self.default_headers()).send() {
+        match self
+            .client
+            .get(url)
+            .headers_011(self.default_headers())
+            .send()
+        {
             Ok(response) => Ok(response),
-            Err(e) => Err(Box::new(e))
+            Err(e) => Err(Box::new(e)),
         }
     }
 
     /// Generic post
-    fn post<S>(
-        &self,
-        url: S,
-        body: &Value
-    ) -> Result<Response, Box<dyn std::error::Error>>
+    fn post<S>(&self, url: S, body: &Value) -> Result<Response, Box<dyn std::error::Error>>
     where
         S: IntoUrl,
     {
-
-        let resp = self.client
+        let resp = self
+            .client
             .post(url)
             .headers_011(self.default_headers())
             .json(&body)
@@ -229,15 +205,12 @@ impl SAPI {
     }
 
     /// Generic delete
-    fn delete<S>(
-        &self,
-        url: S,
-    ) -> Result<Response, Box<dyn std::error::Error>>
+    fn delete<S>(&self, url: S) -> Result<Response, Box<dyn std::error::Error>>
     where
         S: IntoUrl,
     {
-
-        let resp = self.client
+        let resp = self
+            .client
             .delete(url)
             .headers_011(self.default_headers())
             .send()?;
@@ -263,16 +236,14 @@ fn test_services() {
     match client.create_service(&name, &s_uuid.to_string()) {
         Ok(resp) => {
             assert_eq!(resp.status().is_success(), true);
-        },
-        Err(_e) => {
-            assert!(false)
         }
+        Err(_e) => assert!(false),
     }
 
     match client.list_services() {
         Ok(list) => {
             assert_ne!(list.len(), 0);
-        },
+        }
         Err(e) => {
             info!(log, "Error: {:?}", e);
             assert!(false)
@@ -283,10 +254,8 @@ fn test_services() {
 
     match client.get_zone_config(&zone_uuid) {
         Ok(resp) => {
-            assert_eq!(resp.metadata["SERVICE_NAME"],
-                       "2.moray.orbit.example.com");
-        },
-        Err(e) => error!(log, "error: {:?}",  e)
+            assert_eq!(resp.metadata["SERVICE_NAME"], "2.moray.orbit.example.com");
+        }
+        Err(e) => error!(log, "error: {:?}", e),
     }
 }
-
