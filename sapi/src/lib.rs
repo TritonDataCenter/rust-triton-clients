@@ -1,4 +1,4 @@
-// Copyright 2019 Joyent, Inc.
+// Cloneright 2019 Joyent, Inc.
 use slog::Logger;
 use std::time::Duration;
 
@@ -8,41 +8,58 @@ use reqwest::hyper_011::header::{Accept, ContentType, Headers};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct SapiManifests {
+    pub uuid: String,
+    pub name: String,
+    pub path: String,
+    #[serde(default)]
+    pub template: String,
+    #[serde(default)]
+    pub version: String,
+    #[serde(default)]
+    pub master: bool,
+    #[serde(default)]
+    pub post_cmd: String,
+}
+
 /// Container for the zone metadata
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct ZoneConfig {
-    pub metadata: ZoneMetadata,
+    pub manifests: Vec<SapiManifests>,
+    pub metadata: Value,
 }
 
-/// Zone metadata, note the JSON returns is in screaming snake case.
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub struct ZoneMetadata {
-    pub region: String,
-    pub service_name: String,
-    pub shard: String,
-    pub buckets_mdplacement: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum ServiceType {
     Vm,
     Agent,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ServiceData {
-    name: String,
-    uuid: String,
-    application_uuid: String,
-    params: Value,
-    metadata: Option<Value>,
+    pub name: String,
+    pub uuid: String,
+    pub application_uuid: String,
+    pub params: Value,
+    pub metadata: Option<Value>,
     #[serde(default)]
-    master: bool,
+    pub master: bool,
 }
 
-type Services = Vec<ServiceData>;
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct InstanceData {
+    pub uuid: String,
+    pub service_uuid: String,
+    pub params: Option<Value>,
+    pub metadata: Option<Value>,
+}
+
+pub type Services = Vec<ServiceData>;
+pub type Instances = Vec<InstanceData>;
 
 /// The SAPI client
 #[derive(Debug)]
@@ -81,6 +98,36 @@ impl SAPI {
         let url = format!("{}/configs/{}", self.sapi_base_url.clone(), uuid);
         let zconfig: ZoneConfig = self.get(&url)?.json()?;
         Ok(zconfig)
+    }
+
+    /// Get Instance
+    pub fn get_instance(
+        &self,
+        inst_uuid: &str,
+    ) -> Result<InstanceData, Box<dyn std::error::Error>> {
+        let url = format!("{}/instances/{}", self.sapi_base_url.clone(),
+                          inst_uuid);
+        let instance: InstanceData = self.get(&url)?.json()?;
+        Ok(instance)
+    }
+
+    /// List all instances
+    pub fn list_instances(
+        &self,
+    ) -> Result<Instances, Box<dyn std::error::Error>> {
+        let url = format!("{}/instances", self.sapi_base_url.clone());
+        let instances: Instances = self.get(&url)?.json()?;
+        Ok(instances)
+    }
+
+    pub fn list_service_instances(
+        &self,
+        svc_uuid: &str,
+    ) -> Result<Instances, Box<dyn std::error::Error>> {
+        let url = format!("{}/instances?service_uuid={}", self.sapi_base_url
+            .clone(), svc_uuid);
+        let instances: Instances = self.get(&url)?.json()?;
+        Ok(instances)
     }
 
     /// List all services
@@ -236,7 +283,8 @@ fn test_services() {
 
     match client.get_zone_config(&zone_uuid) {
         Ok(resp) => {
-            assert_eq!(resp.metadata.service_name, "2.moray.orbit.example.com");
+            assert_eq!(resp.metadata["SERVICE_NAME"],
+                       "2.moray.orbit.example.com");
         },
         Err(e) => error!(log, "error: {:?}",  e)
     }

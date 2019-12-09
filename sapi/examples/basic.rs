@@ -11,9 +11,13 @@ fn main() {
     let client = sapi::SAPI::new("http://sapi.ruidc0.joyent.us", 60, log.clone());
 
     let services = client.list_services().unwrap();
-    dbg!(services);
+    dbg!(&services);
 
-    let zone_uuid = String::from("f8bf03e3-5636-4cc4-a939-bbca6b4547f0");
+    let svc = &services[0];
+    let svc_uuid = &svc.uuid;
+
+    let instances = client.list_service_instances(svc_uuid).unwrap();
+    let zone_uuid = &instances[0].uuid;
 
     match client.get_zone_config(&zone_uuid) {
         Ok(resp) => {
