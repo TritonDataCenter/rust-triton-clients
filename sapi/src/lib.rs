@@ -130,6 +130,15 @@ impl SAPI {
         Ok(sdata)
     }
 
+    pub fn get_service_by_name(
+        &self,
+        name: &str,
+    ) -> Result<ServiceData, Box<dyn std::error::Error>> {
+        let url = format!("{}/services?name={}", self.sapi_base_url.clone(), name);
+        let sdata: ServiceData = self.get(&url)?.json()?;
+        Ok(sdata)
+    }
+
     /// create the named service under the application with the passed UUID
     pub fn create_service(
         &self,

@@ -10,6 +10,12 @@ fn main() {
 
     let client = sapi::SAPI::new("http://sapi.ruidc0.joyent.us", 60, log.clone());
 
+    let sapi_svc = client
+        .get_service_by_name("sapi")
+        .expect("get sapi service");
+
+    assert_eq!(sapi_svc.metadata["SERVICE_NAME"], "sapi");
+
     let services = client.list_services().expect("list services");
     dbg!(&services);
 
