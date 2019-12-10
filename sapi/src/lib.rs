@@ -130,12 +130,9 @@ impl SAPI {
         Ok(sdata)
     }
 
-    pub fn get_service_by_name(
-        &self,
-        name: &str,
-    ) -> Result<ServiceData, Box<dyn std::error::Error>> {
+    pub fn get_service_by_name(&self, name: &str) -> Result<Services, Box<dyn std::error::Error>> {
         let url = format!("{}/services?name={}", self.sapi_base_url.clone(), name);
-        let sdata: ServiceData = self.get(&url)?.json()?;
+        let sdata: Services = self.get(&url)?.json()?;
         Ok(sdata)
     }
 
