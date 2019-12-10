@@ -23,7 +23,7 @@ fn main() {
 
     match client.get_zone_config(&zone_uuid) {
         Ok(resp) => {
-            info!(log, "config: {:?}", resp);
+            info!(log, "config: {:#?}", resp);
         }
         Err(e) => error!(log, "error: {:?}", e),
     }
