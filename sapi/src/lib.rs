@@ -21,7 +21,7 @@ pub struct ZoneMetadata {
     pub region: String,
     pub service_name: String,
     pub shard: String,
-    pub electric_boray: String,
+    pub buckets_mdplacement: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
