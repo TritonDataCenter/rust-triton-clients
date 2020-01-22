@@ -1,6 +1,6 @@
 [package]
 name = "sapi"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["bowrocker <jon.anderson@joyent.com>", "rui@joyent.com"]
 edition = "2018"
 
