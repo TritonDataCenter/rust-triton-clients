@@ -1,4 +1,5 @@
-// Cloneright 2019 Joyent, Inc.
+// Copyright 2020 Joyent, Inc.
+
 use slog::Logger;
 use std::time::Duration;
 
@@ -8,10 +9,31 @@ use reqwest::hyper_011::header::{Accept, ContentType, Headers};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+/// Container for the zone metadata
+// XXX This structure is not as stable as the others below.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct ZoneConfig {
+    pub manifests: Vec<SapiManifests>,
+    pub metadata: Value,
+}
+
+// In an attempt to future proof these structures as much as possible the
+// Option<_> type and the serde(default) field attribute have been used in
+// any case where the struct field was not part of the bucket schema at time
+// of creation.  The creation of each of these buckets, and the associated
+// metadata can (at the time this was written) be found in the
+// sdc-sapi:/lib/server/stor/moray.js`initBuckets() function.
+//
+// Some fields will always be part of the response... in current code.  But
+// it is much more likely that those additional fields will be removed or
+// modified than it is that a field will be removed from the bucket schema
+// without significant scrutiny.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct SapiManifests {
     pub uuid: String,
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub path: String,
     #[serde(default)]
     pub template: String,
@@ -23,19 +45,12 @@ pub struct SapiManifests {
     pub post_cmd: String,
 }
 
-/// Container for the zone metadata
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct ZoneConfig {
-    pub manifests: Vec<SapiManifests>,
-    pub metadata: Value,
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ServiceData {
-    pub name: String,
     pub uuid: String,
+    pub name: String,
     pub application_uuid: String,
-    pub params: Value,
+    pub params: Option<Value>,
     pub metadata: Option<Value>,
     #[serde(default)]
     pub master: bool,
@@ -50,8 +65,20 @@ pub struct InstanceData {
     pub service_uuid: String,
     pub params: Option<Value>,
     pub metadata: Option<Value>,
+    // TODO: add type field.  See above.
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ApplicationData {
+    pub uuid: String,
+    pub name: String,
+    pub owner_uuid: String,
+    pub params: Option<Value>,
+    pub metadata: Option<Value>,
+    pub manifests: Option<Value>,
+}
+
+pub type Applications = Vec<ApplicationData>;
 pub type Services = Vec<ServiceData>;
 pub type Instances = Vec<InstanceData>;
 
@@ -167,6 +194,31 @@ impl SAPI {
     ) -> Result<Response, Box<dyn std::error::Error>> {
         let url = format!("{}/services/{}", self.sapi_base_url.clone(), service_uuid);
         self.delete(&url)
+    }
+
+    pub fn get_application_by_name(
+        &self,
+        name: &str,
+    ) -> Result<Applications, Box<dyn std::error::Error>> {
+        let url = format!("{}/applications?name={}", self.sapi_base_url.clone(), name);
+        let apps: Applications = self.get(&url)?.json()?;
+        Ok(apps)
+    }
+
+    pub fn list_applications(&self) -> Result<Applications, Box<dyn std::error::Error>> {
+        let url = format!("{}/applications", self.sapi_base_url.clone());
+        let apps: Applications = self.get(&url)?.json()?;
+        Ok(apps)
+    }
+
+    pub fn get_application(
+        &self,
+        uuid: &str,
+    ) -> Result<ApplicationData, Box<dyn std::error::Error>> {
+        let url = format!("{}/applications/{}", self.sapi_base_url.clone(), uuid);
+
+        let app: ApplicationData = self.get(&url)?.json()?;
+        Ok(app)
     }
 
     //

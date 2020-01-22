@@ -1,3 +1,5 @@
+// Copyright 2020 Joyent, Inc.
+
 use slog::{error, info, o, Drain, Logger};
 use std::sync::Mutex;
 
@@ -9,6 +11,16 @@ fn main() {
     );
 
     let client = sapi::SAPI::new("http://sapi.ruidc0.joyent.us", 60, log.clone());
+
+    let sdc_app = client.get_application_by_name("sdc").expect("sdc_app");
+
+    assert_eq!(sdc_app.len(), 1);
+
+    let sdc_app_data = sdc_app[0].clone();
+    let sdc_app_metadata = sdc_app_data.metadata.expect("app metadata");
+    let app_admin_login = sdc_app_metadata["ufds_admin_login"].clone();
+
+    assert_eq!(app_admin_login.as_str(), Some("admin"));
 
     let mut sapi_svc = client
         .get_service_by_name("sapi")
